@@ -228,17 +228,28 @@ const Transaksi = {
         } else {
             return this.semua; // Default ke semua jika filter tidak valid
         }
-        
-        // Tanggal akhir filter adalah hari ini
+
+        startDate.setHours(0, 0, 0, 0); 
+
+        // Tanggal akhir filter adalah hari ini (dengan waktu saat ini)
         const endDate = new Date(); 
         
         return this.semua.filter(t => {
-            // Pastikan t.tanggal adalah string tanggal yang valid (YYYY-MM-DD)
-            const transactionDate = new Date(t.tanggal);
-            transactionDate.setHours(0, 0, 0, 0); // Atur waktu transaksi ke 00:00:00
+            // PERBAIKAN: Parsing tanggal secara manual (Y, M-1, D)
+            // Ini memaksa JavaScript membuat tanggal berdasarkan waktu lokal, 
+            // sehingga 2025-12-06 akan tetap 2025-12-06 di zona waktu lokal.
+            const parts = t.tanggal.split('-');
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1; // Bulan 0-indexed
+            const day = parseInt(parts[2]);
+            
+            const transactionDate = new Date(year, month, day); 
+            
+            // Normalize transactionDate ke midnight lokal untuk perbandingan konsisten
+            transactionDate.setHours(0, 0, 0, 0);
 
-            // Filter data yang di antara startDate dan endDate (Hari ini)
-            return transactionDate >= startDate && transactionDate <= endDate;
+            // Filter data yang di antara startDate dan endDate
+            return transactionDate.getTime() >= startDate.getTime() && transactionDate.getTime() <= endDate.getTime();
         });
     }
 };
@@ -834,3 +845,4 @@ document.addEventListener('visibilitychange', function() {
     }
 
 });
+
