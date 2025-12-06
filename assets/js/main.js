@@ -14,7 +14,7 @@ function perbaruiTanggalWaktu() {
     document.getElementById("time").textContent = sekarang.toLocaleTimeString("id-ID");
 }
 
-// ⚙️ Modal
+// ⚙️ Modal (Modal Tambah Transaksi)
 const Modal = {
     open() {
         document.querySelector(".popup_area").classList.add("aktif");
@@ -22,6 +22,58 @@ const Modal = {
     close() {
         document.querySelector(".popup_area").classList.remove("aktif");
     },
+};
+
+// 💬 Custom Confirm Modal System (PENGGANTI CONFIRM() BAWAAN)
+const ConfirmModal = {
+    // Pastikan elemen-elemen ini ada di dashboard.html
+    popupArea: document.getElementById("confirmPopupArea"), 
+    messageElement: document.getElementById("confirmMessage"),
+    confirmButton: document.getElementById("confirmActionBtn"),
+    cancelButton: document.getElementById("confirmCancelBtn"),
+    onConfirmAction: null, // Callback yang akan dijalankan saat dikonfirmasi
+
+    open(message, onConfirm) {
+        // Fallback ke native confirm jika elemen kustom belum ada
+        if (!this.popupArea) {
+            console.warn("Custom Confirm Modal element not found. Falling back to native confirm.");
+            if (window.confirm(message)) {
+                onConfirm();
+            }
+            return;
+        }
+        
+        this.messageElement.textContent = message;
+        this.onConfirmAction = onConfirm;
+        this.popupArea.classList.add("aktif");
+    },
+
+    close() {
+        if (this.popupArea) {
+            this.popupArea.classList.remove("aktif");
+        }
+        this.onConfirmAction = null;
+    },
+
+    setupListeners() {
+        if (this.confirmButton) {
+            this.confirmButton.addEventListener('click', () => {
+                if (this.onConfirmAction) {
+                    // Jalankan aksi konfirmasi
+                    this.onConfirmAction();
+                }
+                this.close();
+            });
+        }
+        if (this.cancelButton) {
+            this.cancelButton.addEventListener('click', this.close);
+        }
+        // Close on blur (background click)
+        const blurElement = document.querySelector("#confirmPopupArea .popupblur");
+        if (blurElement) {
+            blurElement.addEventListener('click', this.close);
+        }
+    }
 };
 
 // 🔐 API Helper Functions - DIUPDATE UNTUK BACKEND BARU
@@ -575,14 +627,15 @@ async function updateChart() {
 
 // 🆕 FUNGSI RESET DATA
 async function resetData() {
-    if (confirm('Apakah Anda yakin ingin menghapus semua riwayat transaksi? Tindakan ini tidak dapat dibatalkan!')) {
+    // MENGGANTIKAN CONFIRM() DENGAN CUSTOM CONFIRM MODAL
+    ConfirmModal.open('Apakah Anda yakin ingin menghapus semua riwayat transaksi? Tindakan ini tidak dapat dibatalkan!', async () => {
+        const resetBtn = document.querySelector('#resetData');
+        const originalText = resetBtn.textContent;
+        
         try {
-            const submitBtn = document.querySelector('#resetData');
-            const originalText = submitBtn.textContent;
-            
             // Loading state
-            submitBtn.textContent = 'Menghapus...';
-            submitBtn.disabled = true;
+            resetBtn.textContent = 'Menghapus...';
+            resetBtn.disabled = true;
             
             // Hapus semua transaksi satu per satu
             const deletePromises = Transaksi.semua.map(transaksi => 
@@ -603,16 +656,16 @@ async function resetData() {
             console.error('Error resetting data:', error);
             showNotification('Gagal menghapus data: ' + error.message, 'error');
         } finally {
-            const submitBtn = document.querySelector('#resetData');
-            submitBtn.textContent = 'Atur Ulang';
-            submitBtn.disabled = false;
+            resetBtn.textContent = originalText;
+            resetBtn.disabled = false;
         }
-    }
+    });
 }
 
 // Helper function untuk hapus transaksi
 async function hapusTransaksi(id) {
-    if (confirm('Hapus transaksi ini?')) {
+    // MENGGANTIKAN CONFIRM() DENGAN CUSTOM CONFIRM MODAL
+    ConfirmModal.open('Hapus transaksi ini?', async () => {
         try {
             await Transaksi.hapus(id);
             DOM.renderTransactions();
@@ -622,7 +675,7 @@ async function hapusTransaksi(id) {
         } catch (error) {
             showNotification('Gagal menghapus: ' + error.message, 'error');
         }
-    }
+    });
 }
 
 // ⚡ Jalankan Aplikasi
@@ -664,14 +717,15 @@ async function loadProfilePhoto() {
 
 // Fungsi untuk logout
 function logout() {
-    if (confirm('Apakah Anda yakin ingin logout?')) {
+    // MENGGANTIKAN CONFIRM() DENGAN CUSTOM CONFIRM MODAL
+    ConfirmModal.open('Apakah Anda yakin ingin logout?', () => {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('currentUser');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('transaksi');
         window.location.href = 'index.html';
-    }
+    });
 }
 
 // 🛠 Utility Functions
@@ -697,6 +751,7 @@ function showNotification(message, type = 'info') {
         const styles = document.createElement('style');
         styles.id = 'notification-styles';
         styles.textContent = `
+            /* ... (CSS ASLI UNTUK NOTIFIKASI) ... */
             .notification {
                 position: fixed;
                 top: 20px;
@@ -721,6 +776,44 @@ function showNotification(message, type = 'info') {
                 gap: 10px;
                 color: #374151;
                 font-weight: 500;
+            }
+            /* Menambahkan style minimal untuk modal konfirmasi */
+            #confirmPopupArea .popupblur {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+            }
+            #confirmPopupArea .popup {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: white;
+                padding: 30px;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                z-index: 1000;
+                max-width: 400px;
+                width: 90%;
+            }
+            #confirmPopupArea {
+                display: none;
+            }
+            #confirmPopupArea.aktif {
+                display: block;
+            }
+            #confirmPopupArea .text-center {
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            #confirmPopupArea .flex-btns {
+                display: flex;
+                justify-content: space-around;
+                gap: 10px;
             }
         `;
         document.head.appendChild(styles);
@@ -797,6 +890,9 @@ function setupEventListeners() {
     if (logoutBtn) {
         logoutBtn.addEventListener("click", logout);
     }
+
+    // SETUP CUSTOM CONFIRM MODAL
+    ConfirmModal.setupListeners();
     
     // Close dropdown ketika klik di luar
     document.addEventListener("click", function() {
