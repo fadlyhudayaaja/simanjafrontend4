@@ -38,7 +38,6 @@ const API = {
             'Authorization': `Bearer ${token}`
         };
         
-        // PENTING: Jangan set Content-Type untuk FormData agar browser bisa mengatur boundary
         if (!isFormData) {
             headers['Content-Type'] = 'application/json';
         }
@@ -72,11 +71,9 @@ const API = {
             };
             
             if (isFormData) {
-                // Untuk FormData, kita hanya perlu menambahkan header Authorization
                 options.headers = { 'Authorization': await API.getHeaders(true).then(h => h.Authorization) };
                 options.body = data;
             } else {
-                // Untuk JSON, kita perlu Content-Type: application/json
                 options.headers = await this.getHeaders(isFormData);
                 options.body = JSON.stringify(data);
             }
@@ -147,7 +144,7 @@ const Transaksi = {
             console.log('✅ Transaction added:', response);
             
             // Reload data terbaru dari server
-            await this.load(); // PENTING: Memastikan data 'semua' terupdate
+            await this.load(); 
             return response;
         } catch (error) {
             console.error('❌ Error adding transaction:', error);
@@ -173,7 +170,7 @@ const Transaksi = {
     async getRingkasan() {
         try {
             console.log('🔍 Getting summary dari backend...');
-            // PASTIKAN ENDPOINT SUDAH DIPERBAIKI DARI /summary MENJADI /summary/summary
+            // ENDPOINT SUDAH DIPERBAIKI
             const data = await API.get('/transactions/summary/summary'); 
             
             // Format data untuk frontend
@@ -193,12 +190,14 @@ const Transaksi = {
         }
     },
 
+    // Fungsi ini tetap menghitung SEMUA transaksi (untuk fallback/ringkasan utama)
     pemasukan() {
         return this.semua
             .filter(t => t.jenis === 'income')
             .reduce((total, t) => total + parseFloat(t.jumlah || 0), 0);
     },
 
+    // Fungsi ini tetap menghitung SEMUA transaksi (untuk fallback/ringkasan utama)
     pengeluaran() {
         return this.semua
             .filter(t => t.jenis === 'expense')
@@ -207,6 +206,40 @@ const Transaksi = {
 
     saldo() {
         return this.pemasukan() - this.pengeluaran();
+    },
+
+    // ===============================================
+    // 🆕 FUNGSI BARU: FILTER TRANSAKSI BERDASARKAN WAKTU
+    // ===============================================
+    getFilteredTransactions(range) {
+        if (range === 'all') {
+            return this.semua;
+        }
+
+        let startDate = new Date();
+        startDate.setHours(0, 0, 0, 0); // Reset waktu agar perbandingan lebih akurat
+
+        if (range === '3months') {
+            startDate.setMonth(startDate.getMonth() - 3);
+        } else if (range === '6months') {
+            startDate.setMonth(startDate.getMonth() - 6);
+        } else if (range === '1year') {
+            startDate.setFullYear(startDate.getFullYear() - 1);
+        } else {
+            return this.semua; // Default ke semua jika filter tidak valid
+        }
+        
+        // Tanggal akhir filter adalah hari ini
+        const endDate = new Date(); 
+        
+        return this.semua.filter(t => {
+            // Pastikan t.tanggal adalah string tanggal yang valid (YYYY-MM-DD)
+            const transactionDate = new Date(t.tanggal);
+            transactionDate.setHours(0, 0, 0, 0); // Atur waktu transaksi ke 00:00:00
+
+            // Filter data yang di antara startDate dan endDate (Hari ini)
+            return transactionDate >= startDate && transactionDate <= endDate;
+        });
     }
 };
 
@@ -222,7 +255,7 @@ const DOM = {
             return;
         }
         
-        // Urutkan berdasarkan tanggal terbaru
+        // Urutkan berdasarkan tanggal terbaru (menggunakan Transaksi.semua)
         const sortedTransactions = [...Transaksi.semua].sort((a, b) => 
             new Date(b.tanggal) - new Date(a.tanggal)
         );
@@ -391,7 +424,7 @@ const Form = {
             // Update UI
             DOM.renderTransactions();
             await DOM.perbaruiRingkasan();
-            await updateChart(); // BARIS INI DITAMBAHKAN UNTUK AUTO-REFRESH CHART
+            await updateChart(); // Memastikan chart di-refresh dengan data terbaru
             
             // Reset & close
             this.hapusIsi();
@@ -445,9 +478,21 @@ async function updateChart() {
     if (!canvas) return;
 
     try {
-        // Data untuk chart dari transaksi yang sudah ada
-        const pemasukan = Transaksi.pemasukan();
-        const pengeluaran = Transaksi.pengeluaran();
+        // ====================================================================
+        // 💡 PERBAIKAN UTAMA: Ambil data yang difilter berdasarkan timeRange
+        // ====================================================================
+        const filteredTransactions = Transaksi.getFilteredTransactions(timeRange);
+
+        // 2. HITUNG PEMASUKAN DAN PENGELUARAN HANYA DARI DATA YANG SUDAH DIFILTER
+        const pemasukan = filteredTransactions
+            .filter(t => t.jenis === 'income')
+            .reduce((total, t) => total + parseFloat(t.jumlah || 0), 0);
+            
+        const pengeluaran = filteredTransactions
+            .filter(t => t.jenis === 'expense')
+            .reduce((total, t) => total + parseFloat(t.jumlah || 0), 0);
+        // ====================================================================
+
         const hasData = pemasukan > 0 || pengeluaran > 0;
 
         if (!hasData) {
@@ -713,7 +758,7 @@ function setupEventListeners() {
     }
     
     if (timeRangeSelector) {
-        timeRangeSelector.addEventListener('change', updateChart);
+        timeRangeSelector.addEventListener('change', updateChart); // PENTING: Pemicu updateChart saat filter waktu berubah
     }
     
     // Tombol reset data
