@@ -1,5 +1,5 @@
 /* ============================== */
-/*     LOGIKA APLIKASI KEUANGANKU */
+/* LOGIKA APLIKASI KEUANGANKU */
 /* ============================== */
 
 // 📅 Tanggal & Waktu Real-Time
@@ -38,6 +38,7 @@ const API = {
             'Authorization': `Bearer ${token}`
         };
         
+        // PENTING: Jangan set Content-Type untuk FormData agar browser bisa mengatur boundary
         if (!isFormData) {
             headers['Content-Type'] = 'application/json';
         }
@@ -68,12 +69,15 @@ const API = {
         try {
             const options = {
                 method: 'POST',
-                headers: await this.getHeaders(isFormData)
             };
             
             if (isFormData) {
+                // Untuk FormData, kita hanya perlu menambahkan header Authorization
+                options.headers = { 'Authorization': await API.getHeaders(true).then(h => h.Authorization) };
                 options.body = data;
             } else {
+                // Untuk JSON, kita perlu Content-Type: application/json
+                options.headers = await this.getHeaders(isFormData);
                 options.body = JSON.stringify(data);
             }
             
@@ -143,7 +147,7 @@ const Transaksi = {
             console.log('✅ Transaction added:', response);
             
             // Reload data terbaru dari server
-            await this.load();
+            await this.load(); // PENTING: Memastikan data 'semua' terupdate
             return response;
         } catch (error) {
             console.error('❌ Error adding transaction:', error);
@@ -169,8 +173,8 @@ const Transaksi = {
     async getRingkasan() {
         try {
             console.log('🔍 Getting summary dari backend...');
-            // PASTIKAN ENDPOINT INI BENAR DI BACKEND
-            const data = await API.get('/transactions/summary/summary');
+            // PASTIKAN ENDPOINT SUDAH DIPERBAIKI DARI /summary MENJADI /summary/summary
+            const data = await API.get('/transactions/summary/summary'); 
             
             // Format data untuk frontend
             return {
@@ -343,6 +347,7 @@ const Form = {
         // Tambahkan file jika ada
         const file = this.bukti.files[0];
         if (file) {
+            // PENTING: Nama field 'buktiTransaksi' harus sesuai dengan backend Multer
             formData.append('buktiTransaksi', file);
         }
         
@@ -386,6 +391,7 @@ const Form = {
             // Update UI
             DOM.renderTransactions();
             await DOM.perbaruiRingkasan();
+            await updateChart(); // BARIS INI DITAMBAHKAN UNTUK AUTO-REFRESH CHART
             
             // Reset & close
             this.hapusIsi();
@@ -783,5 +789,3 @@ document.addEventListener('visibilitychange', function() {
     }
 
 });
-
-
