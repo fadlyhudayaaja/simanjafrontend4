@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     // >>> PERUBAHAN KRUSIAL ADA DI SINI <<<
-    const BASE_URL = 'https://simanjabackend-qli5.vercel.app/'; // GANTI dengan URL Vercel Backend Anda! Contoh: 'https://simanjabackend-qli5.vercel.app'
+    const BASE_URL = 'https://simanjabackend-qli5.vercel.app'; // GANTI dengan URL Vercel Backend Anda! Contoh: 'https://simanjabackend-qli5.vercel.app'
     // >>> AKHIR PERUBAHAN KRUSIAL <<<
 
     const registerForm = document.getElementById('registerForm');
@@ -164,4 +164,5 @@ document.addEventListener('DOMContentLoaded', function() {
             registerForm.dispatchEvent(new Event('submit'));
         }
     });
+
 });
