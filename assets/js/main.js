@@ -170,7 +170,7 @@ const Transaksi = {
         try {
             console.log('🔍 Getting summary dari backend...');
             // PASTIKAN ENDPOINT INI BENAR DI BACKEND
-            const data = await API.get('/transactions/summary');
+            const data = await API.get('/transactions/summary/summary');
             
             // Format data untuk frontend
             return {
@@ -343,7 +343,7 @@ const Form = {
         // Tambahkan file jika ada
         const file = this.bukti.files[0];
         if (file) {
-            formData.append('bukti_transaksi', file);
+            formData.append('buktiTransaksi', file);
         }
         
         console.log('🔍 FormData untuk transaksi:', {
@@ -783,4 +783,5 @@ document.addEventListener('visibilitychange', function() {
     }
 
 });
+
 
