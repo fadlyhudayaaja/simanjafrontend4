@@ -14,7 +14,40 @@ function perbaruiTanggalWaktu() {
     document.getElementById("time").textContent = sekarang.toLocaleTimeString("id-ID");
 }
 
-// ⚙️ Modal
+// 🗓 Helper untuk menghitung tanggal awal berdasarkan rentang
+function getDateRange(range) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Atur ke awal hari ini untuk konsistensi
+
+    let startDate = null;
+    let tempDate = new Date(today); // Gunakan salinan untuk manipulasi
+
+    switch (range) {
+        case '3m':
+            // Mundur 3 bulan
+            tempDate.setMonth(tempDate.getMonth() - 3);
+            startDate = tempDate.toISOString().split('T')[0];
+            break;
+        case '6m':
+            // Mundur 6 bulan
+            tempDate.setMonth(tempDate.getMonth() - 6);
+            startDate = tempDate.toISOString().split('T')[0];
+            break;
+        case '1y':
+            // Mundur 1 tahun
+            tempDate.setFullYear(tempDate.getFullYear() - 1);
+            startDate = tempDate.toISOString().split('T')[0];
+            break;
+        case 'all':
+        default:
+            startDate = null; 
+            break;
+    }
+    // Catatan: endDate dibiarkan null, yang akan default ke hari ini di backend
+    return { startDate };
+}
+
+// ⚙ Modal
 const Modal = {
     open() {
         document.querySelector(".popup_area").classList.add("aktif");
@@ -26,7 +59,7 @@ const Modal = {
 
 // 🔐 API Helper Functions - DIUPDATE UNTUK BACKEND BARU
 const API = {
-    baseURL: 'https://simanjabackend-qli5.vercel.app/api',
+    baseURL: 'https://simanja-backend.vercel.app/api',
     
     async getHeaders(isFormData = false) {
         const token = localStorage.getItem('token');
@@ -35,7 +68,7 @@ const API = {
         }
         
         const headers = {
-            'Authorization': `Bearer ${token}`
+            'Authorization': Bearer ${token}
         };
         
         // PENTING: Jangan set Content-Type untuk FormData agar browser bisa mengatur boundary
@@ -48,14 +81,14 @@ const API = {
 
     async get(url) {
         try {
-            console.log(`🔍 GET ${url}`);
-            const response = await fetch(`${this.baseURL}${url}`, {
+            console.log(🔍 GET ${url});
+            const response = await fetch(${this.baseURL}${url}, {
                 headers: await this.getHeaders()
             });
             
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                throw new Error(errorData.error || HTTP error! status: ${response.status});
             }
             
             return response.json();
@@ -81,13 +114,13 @@ const API = {
                 options.body = JSON.stringify(data);
             }
             
-            console.log(`🔍 POST ${url}`, { data: !isFormData ? data : 'FormData', isFormData });
+            console.log(🔍 POST ${url}, { data: !isFormData ? data : 'FormData', isFormData });
             
-            const response = await fetch(`${this.baseURL}${url}`, options);
+            const response = await fetch(${this.baseURL}${url}, options);
             
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                throw new Error(errorData.error || HTTP error! status: ${response.status});
             }
             
             return response.json();
@@ -99,15 +132,15 @@ const API = {
 
     async delete(url) {
         try {
-            console.log(`🔍 DELETE ${url}`);
-            const response = await fetch(`${this.baseURL}${url}`, {
+            console.log(🔍 DELETE ${url});
+            const response = await fetch(${this.baseURL}${url}, {
                 method: 'DELETE',
                 headers: await this.getHeaders()
             });
             
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                throw new Error(errorData.error || HTTP error! status: ${response.status});
             }
             
             return response.json();
@@ -129,7 +162,7 @@ const Transaksi = {
             
             // Pastikan format data sesuai
             this.semua = data.transactions || [];
-            console.log(`✅ ${this.semua.length} transaksi loaded`);
+            console.log(✅ ${this.semua.length} transaksi loaded);
             
             return this.semua;
         } catch (error) {
@@ -157,8 +190,8 @@ const Transaksi = {
 
     async hapus(id) {
         try {
-            console.log(`🔍 Deleting transaction ID ${id} dari backend...`);
-            const response = await API.delete(`/transactions/${id}`);
+            console.log(🔍 Deleting transaction ID ${id} dari backend...);
+            const response = await API.delete(/transactions/${id});
             
             // Update local data
             this.semua = this.semua.filter(t => t.id !== id);
@@ -170,11 +203,19 @@ const Transaksi = {
         }
     },
 
-    async getRingkasan() {
+    async getRingkasan(options = {}) { // <--- MODIFIKASI: Menerima options
         try {
-            console.log('🔍 Getting summary dari backend...');
-            // PASTIKAN ENDPOINT SUDAH DIPERBAIKI DARI /summary MENJADI /summary/summary
-            const data = await API.get('/transactions/summary/summary'); 
+            console.log('🔍 Getting summary dari backend...', options);
+            
+            let url = '/transactions/summary/summary';
+            
+            // MODIFIKASI: Tambahkan parameter tanggal jika ada
+            if (options.startDate || options.endDate) {
+                const params = new URLSearchParams(options).toString();
+                url += ?${params};
+            }
+
+            const data = await API.get(url); // <--- Gunakan URL dengan parameter
             
             // Format data untuk frontend
             return {
@@ -282,6 +323,7 @@ const DOM = {
 
     async perbaruiRingkasan() {
         try {
+            // TIDAK MENGIRIM FILTER DI SINI, HANYA MENGAMBIL TOTAL KESELURUHAN (tanpa options)
             const ringkasan = await Transaksi.getRingkasan();
             
             document.getElementById("incomeDisplay").textContent = 
@@ -445,9 +487,16 @@ async function updateChart() {
     if (!canvas) return;
 
     try {
-        // Data untuk chart dari transaksi yang sudah ada
-        const pemasukan = Transaksi.pemasukan();
-        const pengeluaran = Transaksi.pengeluaran();
+        // 1. Hitung rentang tanggal
+        const { startDate } = getDateRange(timeRange);
+        
+        // 2. Ambil data ringkasan yang difilter dari backend
+        console.log(🔍 Fetching filtered summary for range: ${timeRange} (start: ${startDate || 'all time'}));
+        const ringkasan = await Transaksi.getRingkasan({ startDate }); // Panggil dengan filter
+        
+        // 3. Gunakan hasil dari backend untuk chart
+        const pemasukan = ringkasan.totalIncome;
+        const pengeluaran = ringkasan.totalExpense;
         const hasData = pemasukan > 0 || pengeluaran > 0;
 
         if (!hasData) {
@@ -464,7 +513,8 @@ async function updateChart() {
             labels: ['Pemasukan', 'Pengeluaran'],
             datasets: [{
                 label: 'Jumlah (Rp)',
-                data: [pemasukan, pengeluaran],
+                // Gunakan data yang sudah difilter dari ringkasan
+                data: [pemasukan, pengeluaran], 
                 backgroundColor: ['#3B82F6', '#EF4444'],
                 borderColor: ['#2563EB', '#DC2626'],
                 borderWidth: 2
@@ -494,7 +544,7 @@ async function updateChart() {
                             label: function(context) {
                                 const label = context.label || '';
                                 const value = context.raw || 0;
-                                return `${label}: Rp ${value.toLocaleString('id-ID')}`;
+                                return ${label}: Rp ${value.toLocaleString('id-ID')};
                             }
                         }
                     }
@@ -530,7 +580,7 @@ async function resetData() {
             
             // Hapus semua transaksi satu per satu
             const deletePromises = Transaksi.semua.map(transaksi => 
-                API.delete(`/transactions/${transaksi.id}`)
+                API.delete(/transactions/${transaksi.id})
             );
             
             await Promise.all(deletePromises);
@@ -593,16 +643,16 @@ async function loadProfilePhoto() {
         const profileCircle = document.getElementById('profileCircle');
         
         if (user && user.fotoProfil) {
-            profileCircle.innerHTML = `<img src="${user.fotoProfil}" alt="Foto Profil" class="profile-image">`;
+            profileCircle.innerHTML = <img src="${user.fotoProfil}" alt="Foto Profil" class="profile-image">;
         } else {
             const nama = user.namaLengkap || user.username || 'User';
             const initial = nama.charAt(0).toUpperCase();
-            profileCircle.innerHTML = `<div class="profile-default">${initial}</div>`;
+            profileCircle.innerHTML = <div class="profile-default">${initial}</div>;
         }
     } catch (error) {
         console.error('Error loading profile photo:', error);
         const profileCircle = document.getElementById('profileCircle');
-        profileCircle.innerHTML = `<div class="profile-default">U</div>`;
+        profileCircle.innerHTML = <div class="profile-default">U</div>;
     }
 }
 
@@ -626,9 +676,9 @@ function showNotification(message, type = 'info') {
 
     // Buat notifikasi baru
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = notification ${type};
     
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ';
     notification.innerHTML = `
         <div class="notification-content">
             <span class="notification-icon">${icon}</span>
