@@ -217,8 +217,7 @@ const Transaksi = {
         }
 
         let startDate = new Date();
-        startDate.setHours(0, 0, 0, 0); // Reset waktu agar perbandingan lebih akurat
-
+        
         if (range === '3months') {
             startDate.setMonth(startDate.getMonth() - 3);
         } else if (range === '6months') {
@@ -226,34 +225,41 @@ const Transaksi = {
         } else if (range === '1year') {
             startDate.setFullYear(startDate.getFullYear() - 1);
         } else {
-            return this.semua; // Default ke semua jika filter tidak valid
+            return this.semua; 
         }
-
+        
         startDate.setHours(0, 0, 0, 0); 
-
-        // Tanggal akhir filter adalah hari ini (dengan waktu saat ini)
         const endDate = new Date(); 
         
-        return this.semua.filter(t => {
-            // PERBAIKAN: Parsing tanggal secara manual (Y, M-1, D)
-            // Ini memaksa JavaScript membuat tanggal berdasarkan waktu lokal, 
-            // sehingga 2025-12-06 akan tetap 2025-12-06 di zona waktu lokal.
+        console.log(`==========================================`);
+        console.log(`🔍 MEMFILTER: ${range}`);
+        console.log(`⏰ Start Date Filter: ${startDate.toLocaleDateString('id-ID')} (${startDate.toISOString()})`);
+        console.log(`⏰ End Date Filter: ${endDate.toLocaleDateString('id-ID')} (${endDate.toISOString()})`);
+        console.log(`==========================================`);
+        
+        const filteredList = this.semua.filter(t => {
             const parts = t.tanggal.split('-');
             const year = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1; // Bulan 0-indexed
+            const month = parseInt(parts[1]) - 1;
             const day = parseInt(parts[2]);
             
+            // 1. Buat tanggal transaksi dalam Local Time
             const transactionDate = new Date(year, month, day); 
-            
-            // Normalize transactionDate ke midnight lokal untuk perbandingan konsisten
-            transactionDate.setHours(0, 0, 0, 0);
+            transactionDate.setHours(0, 0, 0, 0); 
 
-            // Filter data yang di antara startDate dan endDate
-            return transactionDate.getTime() >= startDate.getTime() && transactionDate.getTime() <= endDate.getTime();
+            const isWithinRange = transactionDate.getTime() >= startDate.getTime() && transactionDate.getTime() <= endDate.getTime();
+
+            // 2. Log hasil perbandingan untuk setiap transaksi
+            console.log(`\t[${isWithinRange ? '✅ INCLUDE' : '❌ EXCLUDE'}] Transaksi Tgl: ${transactionDate.toLocaleDateString('id-ID')}`);
+
+            return isWithinRange;
         });
-    }
-};
 
+        console.log(`==========================================`);
+        console.log(`✅ Total Transaksi dalam Range: ${filteredList.length}`);
+        
+        return filteredList;
+    }
 // 🧾 Manipulasi Tabel - DIUPDATE
 const DOM = {
     wadahTabel: document.querySelector("#data-table tbody"),
@@ -845,4 +851,5 @@ document.addEventListener('visibilitychange', function() {
     }
 
 });
+
 
