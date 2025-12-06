@@ -1,4 +1,4 @@
-const BASE_URL = 'https://simanjabackend-qli5.vercel.app/';
+const BASE_URL = 'https://simanjabackend-qli5.vercel.app';
 // 📋 Inisialisasi Data Profil
 let userData = {};
 
@@ -592,4 +592,5 @@ document.addEventListener('DOMContentLoaded', function() {
     loadProfileData();
     
     console.log('✅ Profile page initialized');
+
 });
