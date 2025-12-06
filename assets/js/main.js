@@ -26,7 +26,7 @@ const Modal = {
 
 // 🔐 API Helper Functions - DIUPDATE UNTUK BACKEND BARU
 const API = {
-    baseURL: 'https://simanjabackend-qli5.vercel.app',
+    baseURL: 'https://simanjabackend-qli5.vercel.app/api',
     
     async getHeaders(isFormData = false) {
         const token = localStorage.getItem('token');
@@ -343,7 +343,7 @@ const Form = {
         // Tambahkan file jika ada
         const file = this.bukti.files[0];
         if (file) {
-            formData.append('buktiTransaksi', file);
+            formData.append('bukti_transaksi', file);
         }
         
         console.log('🔍 FormData untuk transaksi:', {
@@ -783,3 +783,4 @@ document.addEventListener('visibilitychange', function() {
     }
 
 });
+
