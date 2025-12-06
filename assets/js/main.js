@@ -190,14 +190,12 @@ const Transaksi = {
         }
     },
 
-    // Fungsi ini tetap menghitung SEMUA transaksi (untuk fallback/ringkasan utama)
     pemasukan() {
         return this.semua
             .filter(t => t.jenis === 'income')
             .reduce((total, t) => total + parseFloat(t.jumlah || 0), 0);
     },
 
-    // Fungsi ini tetap menghitung SEMUA transaksi (untuk fallback/ringkasan utama)
     pengeluaran() {
         return this.semua
             .filter(t => t.jenis === 'expense')
@@ -209,7 +207,7 @@ const Transaksi = {
     },
 
     // ===============================================
-    // 🆕 FUNGSI BARU: FILTER TRANSAKSI BERDASARKAN WAKTU
+    // PERBAIKAN: LOGIKA FILTER WAKTU UNTUK CHART
     // ===============================================
     getFilteredTransactions(range) {
         if (range === 'all') {
@@ -228,38 +226,37 @@ const Transaksi = {
             return this.semua; 
         }
         
+        // Normalize startDate ke midnight lokal
         startDate.setHours(0, 0, 0, 0); 
-        const endDate = new Date(); 
         
-        console.log(`==========================================`);
-        console.log(`🔍 MEMFILTER: ${range}`);
-        console.log(`⏰ Start Date Filter: ${startDate.toLocaleDateString('id-ID')} (${startDate.toISOString()})`);
-        console.log(`⏰ End Date Filter: ${endDate.toLocaleDateString('id-ID')} (${endDate.toISOString()})`);
-        console.log(`==========================================`);
+        const endDate = new Date(); 
+        // Normalize endDate ke akhir hari ini (agar transaksi hari ini terhitung)
+        endDate.setHours(23, 59, 59, 999); 
         
         const filteredList = this.semua.filter(t => {
+            if (!t.tanggal) return false;
+
+            // Parse tanggal secara manual (Y, M-1, D) untuk menghindari timezone offset
             const parts = t.tanggal.split('-');
+            if (parts.length !== 3) return false;
+            
             const year = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1;
+            const month = parseInt(parts[1]) - 1; 
             const day = parseInt(parts[2]);
             
-            // 1. Buat tanggal transaksi dalam Local Time
             const transactionDate = new Date(year, month, day); 
-            transactionDate.setHours(0, 0, 0, 0); 
+            transactionDate.setHours(0, 0, 0, 0); // Normalize to local midnight
 
-            const isWithinRange = transactionDate.getTime() >= startDate.getTime() && transactionDate.getTime() <= endDate.getTime();
-
-            // 2. Log hasil perbandingan untuk setiap transaksi
-            console.log(`\t[${isWithinRange ? '✅ INCLUDE' : '❌ EXCLUDE'}] Transaksi Tgl: ${transactionDate.toLocaleDateString('id-ID')}`);
-
-            return isWithinRange;
+            // Bandingkan timestamp
+            return transactionDate.getTime() >= startDate.getTime() && transactionDate.getTime() <= endDate.getTime();
         });
-
-        console.log(`==========================================`);
+        
         console.log(`✅ Total Transaksi dalam Range: ${filteredList.length}`);
         
         return filteredList;
     }
+}; // <-- PERBAIKAN SINTAKS: TUTUP OBJEK TRANSAKSI DENGAN BENAR
+
 // 🧾 Manipulasi Tabel - DIUPDATE
 const DOM = {
     wadahTabel: document.querySelector("#data-table tbody"),
@@ -495,12 +492,10 @@ async function updateChart() {
     if (!canvas) return;
 
     try {
-        // ====================================================================
-        // 💡 PERBAIKAN UTAMA: Ambil data yang difilter berdasarkan timeRange
-        // ====================================================================
+        // PERBAIKAN: Ambil data yang difilter berdasarkan timeRange
         const filteredTransactions = Transaksi.getFilteredTransactions(timeRange);
 
-        // 2. HITUNG PEMASUKAN DAN PENGELUARAN HANYA DARI DATA YANG SUDAH DIFILTER
+        // HITUNG PEMASUKAN DAN PENGELUARAN HANYA DARI DATA YANG SUDAH DIFILTER
         const pemasukan = filteredTransactions
             .filter(t => t.jenis === 'income')
             .reduce((total, t) => total + parseFloat(t.jumlah || 0), 0);
@@ -508,7 +503,6 @@ async function updateChart() {
         const pengeluaran = filteredTransactions
             .filter(t => t.jenis === 'expense')
             .reduce((total, t) => total + parseFloat(t.jumlah || 0), 0);
-        // ====================================================================
 
         const hasData = pemasukan > 0 || pengeluaran > 0;
 
@@ -775,7 +769,7 @@ function setupEventListeners() {
     }
     
     if (timeRangeSelector) {
-        timeRangeSelector.addEventListener('change', updateChart); // PENTING: Pemicu updateChart saat filter waktu berubah
+        timeRangeSelector.addEventListener('change', updateChart); 
     }
     
     // Tombol reset data
@@ -851,5 +845,3 @@ document.addEventListener('visibilitychange', function() {
     }
 
 });
-
-
